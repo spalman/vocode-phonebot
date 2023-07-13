@@ -1,4 +1,4 @@
-vocode==0.1.111a1
+vocode==0.1.110
 redis
 twilio
 vonage
