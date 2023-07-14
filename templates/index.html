@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <title>Env Variables Check</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        li {
+            margin-bottom: 10px;
+        }
+
+        input[type="checkbox"] {
+            cursor: pointer;
+        }
+
+        input[type="checkbox"]:checked+label {
+            color: green;
+        }
+
+        input[type="checkbox"]:not(:checked)+label {
+            color: red;
+        }
+
+        label {
+            font-weight: bold;
+        }
+
+        .call-form {
+            background-color: #f5f5f5;
+            border-radius: 5px;
+            display: inline-block;
+            padding: 20px;
+            width: 300px;
+        }
+
+        input[type="text"] {
+            background-color: #fff;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+            font-size: 14px;
+            padding: 6px 12px;
+            width: 100%;
+        }
+
+        input[type="submit"] {
+            background-color: #007bff;
+            border: 1px solid #007bff;
+            color: #fff;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+            padding: 6px 12px;
+            width: 100%;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+
+        .message {
+            margin-top: 10px;
+            padding: 6px 12px;
+        }
+
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>Env Variables</h2>
+    <p>Please set the following <a href="https://docs.replit.com/programming-ide/workspace-features/secrets"
+            target="_blank">env variables:</a></p>
+    <ul>
+        {% for key, value in env_vars.items() %}
+        {% if key != "BASE_URL" %}
+        <li>
+            <input type="checkbox" id="{{ key }}" {% if value %}checked{% endif %} disabled>
+            <label for="{{ key }}">{{ key }}</label>
+        </li>
+        {% endif %}
+        {% endfor %}
+    </ul>
+    <h2>Quick Outbound Call</h2>
+    <form id="outboundCallForm" , class="call-form">
+        <label for="to_phone">Recipient:</label>
+        <input type="text" id="to_phone" name="to_phone" required>
+        <label for="recipient_name">recipient name:</label>
+        <input type="text" id="recipient_name" name="recipient_name" required>
+        <label for="recipient_location">recipient location:</label>
+        <input type="text" id="recipient_location" name="recipient_location" required>
+        <br>
+        <input type="submit" value="Start Call">
+    </form>
+    <div id="messageContainer"></div>
+
+
+    <script>
+        const outboundCallForm = document.getElementById("outboundCallForm");
+        const messageContainer = document.getElementById("messageContainer");
+
+        function showMessage(type, text) {
+            messageContainer.innerHTML = `<div class="message ${type}">${text}</div>`;
+        }
+
+        outboundCallForm.addEventListener("submit", async (event) => {
+            console.log("TEST")
+            event.preventDefault();
+            const recipient = document.getElementById("to_phone").value;
+            const recipient_name = document.getElementById("recipient_name").value;
+            const recipient_location = document.getElementById("recipient_location").value;
+            var payload = {
+                to_phone: encodeURIComponent(recipient),
+                name: encodeURIComponent(recipient_name),
+                location: encodeURIComponent(recipient_location)
+            };
+            var data = new FormData();
+            data.append("json", JSON.stringify(payload));
+            const outboundCallURL = "https://{{env_vars.BASE_URL}}/outcall";
+            // const outboundCallURL = "http://{{env_vars.BASE_URL}}/outcall";
+            const response = await fetch(outboundCallURL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                // body: `to_phone=${encodeURIComponent(recipient)}, name=${encodeURIComponent(recipient_name)}, location=${encodeURIComponent(recipient_location)}`
+                body: JSON.stringify({ "to_phone": recipient, "name": recipient_name, "location": recipient_location  })
+            });
+            const result = await response.json();
+            console.log(result);
+            if (!result.status || result.status !== "success") {
+                showMessage("error", result.detail);
+            } else {
+                showMessage("success", "Call started successfully!");
+            }
+        });
+    </script>
+</body>
+
+</html>
