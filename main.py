@@ -131,7 +131,7 @@ async def make_call(recipient: Recipient):
         agent_config=ChatGPTAgentConfig(initial_message=BaseMessage(text="Hello, uh, is this… is this {}?".format(recipient.name)),
                                         prompt_preamble=system_prompt.format(prospect_name=recipient.name, city=recipient.location), end_conversation_on_goodbye=True),
         synthesizer_config=ElevenLabsSynthesizerConfig.from_telephone_output_device(
-            voice_id=ELEVEN_LABS_VOICE_ID)
+            voice_id=ELEVEN_LABS_VOICE_ID, api_key=os.environ.get("ELEVEN_LABS_API_KEY"))
     )
 
     # input("Press enter to start call...")
