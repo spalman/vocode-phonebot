@@ -100,7 +100,7 @@ telephony_server = TelephonyServer(
 class Recipient(BaseModel):
     to_phone: str
     name: str
-    location: str | None = None
+    location: str 
 
 # Expose the starter webpage
 @app.get("/")
