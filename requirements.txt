@@ -3,3 +3,4 @@ redis
 twilio
 vonage
 python-dotenv
+elevenlabs
