@@ -1,7 +1,7 @@
 import logging
 import os
 import vocode
-from fastapi import FastAPI, Request, Form
+from fastapi import FastAPI, Request
 from fastapi.templating import Jinja2Templates
 from vocode.streaming.models.telephony import TwilioConfig
 from vocode.streaming.telephony.config_manager.in_memory_config_manager import InMemoryConfigManager
@@ -10,16 +10,13 @@ from vocode.streaming.models.message import BaseMessage
 from vocode.streaming.models.agent import ChatGPTAgentConfig
 from vocode.streaming.telephony.config_manager.in_memory_config_manager import InMemoryConfigManager
 from vocode.streaming.telephony.conversation.outbound_call import OutboundCall
-from vocode.streaming.models.synthesizer import GTTSSynthesizerConfig, ElevenLabsSynthesizerConfig
+from vocode.streaming.models.synthesizer import  ElevenLabsSynthesizerConfig
 from vocode.streaming.models.message import BaseMessage
 from vocode.streaming.telephony.server.base import (
     TelephonyServer, InboundCallConfig
 )
 from pydantic import BaseModel
-from speller_agent import SpellerAgentFactory
-import sys
 import uvicorn
-import outbound_call
 # if running from python, this will load the local .env
 # docker-compose will load the .env file by itself
 from dotenv import load_dotenv
@@ -69,6 +66,14 @@ You:Thank you, you should receive a text confirmation from us shortly, I just wa
 Your goal is to make such a call. Act like a sales person and simulate such a call with me. Keep your answers short. Generate 1 answer at a time.'''
 
 ELEVEN_LABS_VOICE_ID = '21m00Tcm4TlvDq8ikWAM'
+FROM_PHONE = os.environ["FROM_PHONE"]
+BASE_URL = os.getenv("BASE_URL")
+
+if not BASE_URL:
+    raise ValueError(
+        "BASE_URL must be set in environment if not using pyngrok")
+
+
 config_manager = InMemoryConfigManager()
 
 app = FastAPI(docs_url=None)
@@ -80,27 +85,21 @@ logger.setLevel(logging.DEBUG)
 
 config_manager = InMemoryConfigManager()
 
-BASE_URL = os.getenv("BASE_URL")
-FROM_PHONE = os.environ["FROM_PHONE"]
-vocode.setenv(
-    ELEVEN_LABS_API_KEY=os.getenv("ELEVEN_LABS_API_KEY"),
-)
-
-if not BASE_URL:
-    raise ValueError(
-        "BASE_URL must be set in environment if not using pyngrok")
 
 SYNTH_CONFIG = ElevenLabsSynthesizerConfig.from_telephone_output_device(
     api_key=os.getenv("ELEVEN_LABS_API_KEY"))
 
+vocode.setenv(
+    ELEVEN_LABS_API_KEY=os.getenv("ELEVEN_LABS_API_KEY"),
+)
 AGENT_CONFIG = ChatGPTAgentConfig(
-  initial_message=BaseMessage(text="Hello?"),
-  prompt_preamble="Have a pleasant conversation about life",
-  generate_responses=True,
+    initial_message=BaseMessage(text="Hello?"),
+    prompt_preamble="Have a pleasant conversation about life",
+    generate_responses=True,
 )
 TWILIO_CONFIG = TwilioConfig(
-  account_sid=os.getenv("TWILIO_ACCOUNT_SID"),
-  auth_token=os.getenv("TWILIO_AUTH_TOKEN"),
+    account_sid=os.getenv("TWILIO_ACCOUNT_SID"),
+    auth_token=os.getenv("TWILIO_AUTH_TOKEN"),
 )
 # Let's create and expose that TelephonyServer.
 telephony_server = TelephonyServer(
