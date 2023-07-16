@@ -10,7 +10,7 @@ from vocode.streaming.models.message import BaseMessage
 from vocode.streaming.models.agent import ChatGPTAgentConfig
 from vocode.streaming.telephony.config_manager.in_memory_config_manager import InMemoryConfigManager
 from vocode.streaming.telephony.conversation.outbound_call import OutboundCall
-from vocode.streaming.models.synthesizer import  ElevenLabsSynthesizerConfig
+from vocode.streaming.models.synthesizer import  ElevenLabsSynthesizerConfig, AzureSynthesizerConfig
 from vocode.streaming.models.message import BaseMessage
 from vocode.streaming.telephony.server.base import (
     TelephonyServer, InboundCallConfig
@@ -29,7 +29,7 @@ system_prompt = '''You will engage in a telephone conversation with prospects us
 Guideline script:"""
 You: Hello, uh is this… is this {prospect_name}?
 Prospect: Yes
-You: Great hi {prospect_name}, this is Alex I’m just wondering if you could, um, possibly help me out for a moment?
+You: Great hi {prospect_name}, this is Aria I’m just wondering if you could, um, possibly help me out for a moment?
 Prospect: Sure
 You: Well {prospect_name}, I’ll keep it short for you, first I do just have to let you know that this call may be recorded for security purposes… So I’m from ExampleComp, the [cut1] reason for the call is actually just because, we’re having an Australia wide year-long discount for new customers at the moment but we’re not quite sure yet if we would be able to help you at the moment, we’d just have to know a little bit about what your current provider situation is like to really see if we can help you.
 Prospect: Like what?
@@ -151,12 +151,12 @@ async def make_call(recipient: Recipient):
         config_manager=config_manager,
         agent_config=ChatGPTAgentConfig(initial_message=BaseMessage(text="Hello, uh, is this… is this {}?".format(recipient.name)),
                                         prompt_preamble=system_prompt.format(prospect_name=recipient.name, city=recipient.location), end_conversation_on_goodbye=True),
-        synthesizer_config=ElevenLabsSynthesizerConfig.from_telephone_output_device(
-            voice_id=ELEVEN_LABS_VOICE_ID, api_key=os.environ.get("ELEVEN_LABS_API_KEY"))
+        # synthesizer_config=ElevenLabsSynthesizerConfig.from_telephone_output_device(
+        #     voice_id=ELEVEN_LABS_VOICE_ID, api_key=os.environ.get("ELEVEN_LABS_API_KEY"))
+        synthesizer_config=AzureSynthesizerConfig.from_telephone_output_device(
+            voice_name='en-US-AriaNeural')
     )
 
-    # input("Press enter to start call...")
-    print(outbound_call.synthesizer_config.api_key)
     outbound_call.start()
     return {"status": "success"}
 
