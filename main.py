@@ -13,7 +13,7 @@ from vocode.streaming.telephony.conversation.outbound_call import OutboundCall
 from vocode.streaming.models.synthesizer import GTTSSynthesizerConfig, ElevenLabsSynthesizerConfig
 from vocode.streaming.models.message import BaseMessage
 from vocode.streaming.telephony.server.base import (
-    TelephonyServer,
+    TelephonyServer, InboundCallConfig
 )
 from pydantic import BaseModel
 from speller_agent import SpellerAgentFactory
@@ -81,7 +81,6 @@ logger.setLevel(logging.DEBUG)
 config_manager = InMemoryConfigManager()
 
 BASE_URL = os.getenv("BASE_URL")
-# BASE_URL = 'localhost:8000'
 FROM_PHONE = os.environ["FROM_PHONE"]
 vocode.setenv(
     ELEVEN_LABS_API_KEY=os.getenv("ELEVEN_LABS_API_KEY"),
@@ -91,21 +90,40 @@ if not BASE_URL:
     raise ValueError(
         "BASE_URL must be set in environment if not using pyngrok")
 
+SYNTH_CONFIG = ElevenLabsSynthesizerConfig.from_telephone_output_device(
+    api_key=os.getenv("ELEVEN_LABS_API_KEY"))
+
+AGENT_CONFIG = ChatGPTAgentConfig(
+  initial_message=BaseMessage(text="Hello?"),
+  prompt_preamble="Have a pleasant conversation about life",
+  generate_responses=True,
+)
+TWILIO_CONFIG = TwilioConfig(
+  account_sid=os.getenv("TWILIO_ACCOUNT_SID"),
+  auth_token=os.getenv("TWILIO_AUTH_TOKEN"),
+)
+# Let's create and expose that TelephonyServer.
 telephony_server = TelephonyServer(
     base_url=BASE_URL,
     config_manager=config_manager,
-    agent_factory=SpellerAgentFactory(),
     logger=logger,
+    inbound_call_configs=[
+        InboundCallConfig(url="/inbound_call",
+                          agent_config=AGENT_CONFIG,
+                          twilio_config=TWILIO_CONFIG,
+                          synthesizer_config=SYNTH_CONFIG)
+    ],
 )
-
 
 
 class Recipient(BaseModel):
     to_phone: str
     name: str
-    location: str 
+    location: str
 
 # Expose the starter webpage
+
+
 @app.get("/")
 async def root(request: Request):
     env_vars = {
@@ -114,7 +132,8 @@ async def root(request: Request):
         "DEEPGRAM_API_KEY": os.environ.get("DEEPGRAM_API_KEY"),
         "TWILIO_ACCOUNT_SID": os.environ.get("TWILIO_ACCOUNT_SID"),
         "TWILIO_AUTH_TOKEN": os.environ.get("TWILIO_AUTH_TOKEN"),
-        "OUTBOUND_CALLER_NUMBER": os.environ.get("FROM_PHONE")
+        "OUTBOUND_CALLER_NUMBER": os.environ.get("FROM_PHONE"),
+        "ELEVEN_LABS_API_KEY": os.environ.get("ELEVEN_LABS_API_KEY")
     }
 
     return templates.TemplateResponse("index.html", {
@@ -134,7 +153,7 @@ async def make_call(recipient: Recipient):
         agent_config=ChatGPTAgentConfig(initial_message=BaseMessage(text="Hello, uh, is this… is this {}?".format(recipient.name)),
                                         prompt_preamble=system_prompt.format(prospect_name=recipient.name, city=recipient.location), end_conversation_on_goodbye=True),
         synthesizer_config=ElevenLabsSynthesizerConfig.from_telephone_output_device(
-            voice_id=ELEVEN_LABS_VOICE_ID)
+            voice_id=ELEVEN_LABS_VOICE_ID, api_key=os.environ.get("ELEVEN_LABS_API_KEY"))
     )
 
     # input("Press enter to start call...")
@@ -153,7 +172,7 @@ async def make_call(to_phone: str, name: str, location: str):
         agent_config=ChatGPTAgentConfig(initial_message=BaseMessage(text="Hello, uh, is this… is this {}?".format(name)),
                                         prompt_preamble=system_prompt.format(prospect_name=name, city=location), end_conversation_on_goodbye=True),
         synthesizer_config=ElevenLabsSynthesizerConfig.from_telephone_output_device(
-            voice_id=ELEVEN_LABS_VOICE_ID)
+            voice_id=ELEVEN_LABS_VOICE_ID, api_key=os.environ.get("ELEVEN_LABS_API_KEY"))
     )
 
     # input("Press enter to start call...")
@@ -163,4 +182,4 @@ async def make_call(to_phone: str, name: str, location: str):
 app.include_router(telephony_server.get_router())
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=3000)
