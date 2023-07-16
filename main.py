@@ -157,6 +157,7 @@ async def make_call(recipient: Recipient):
     )
 
     # input("Press enter to start call...")
+    print(outbound_call.synthesizer_config.api_key)
     outbound_call.start()
     return {"status": "success"}
 
