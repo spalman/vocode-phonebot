@@ -10,7 +10,7 @@ from vocode.streaming.models.message import BaseMessage
 from vocode.streaming.models.agent import ChatGPTAgentConfig
 from vocode.streaming.telephony.config_manager.in_memory_config_manager import InMemoryConfigManager
 from vocode.streaming.telephony.conversation.outbound_call import OutboundCall
-from vocode.streaming.models.synthesizer import  ElevenLabsSynthesizerConfig, AzureSynthesizerConfig
+from vocode.streaming.models.synthesizer import ElevenLabsSynthesizerConfig, AzureSynthesizerConfig
 from vocode.streaming.models.message import BaseMessage
 from vocode.streaming.telephony.server.base import (
     TelephonyServer, InboundCallConfig
@@ -100,6 +100,7 @@ AGENT_CONFIG = ChatGPTAgentConfig(
 TWILIO_CONFIG = TwilioConfig(
     account_sid=os.getenv("TWILIO_ACCOUNT_SID"),
     auth_token=os.getenv("TWILIO_AUTH_TOKEN"),
+    record=True
 )
 # Let's create and expose that TelephonyServer.
 telephony_server = TelephonyServer(
@@ -154,7 +155,8 @@ async def make_call(recipient: Recipient):
         # synthesizer_config=ElevenLabsSynthesizerConfig.from_telephone_output_device(
         #     voice_id=ELEVEN_LABS_VOICE_ID, api_key=os.environ.get("ELEVEN_LABS_API_KEY"))
         synthesizer_config=AzureSynthesizerConfig.from_telephone_output_device(
-            voice_name='en-US-AriaNeural')
+            voice_name='en-US-AriaNeural'),
+        twilio_config=TWILIO_CONFIG
     )
 
     outbound_call.start()
@@ -172,7 +174,8 @@ async def make_call(to_phone: str, name: str, location: str):
         agent_config=ChatGPTAgentConfig(initial_message=BaseMessage(text="Hello, uh, is this… is this {}?".format(name)),
                                         prompt_preamble=system_prompt.format(prospect_name=name, city=location), end_conversation_on_goodbye=True),
         synthesizer_config=ElevenLabsSynthesizerConfig.from_telephone_output_device(
-            voice_id=ELEVEN_LABS_VOICE_ID, api_key=os.environ.get("ELEVEN_LABS_API_KEY"))
+            voice_id=ELEVEN_LABS_VOICE_ID, api_key=os.environ.get("ELEVEN_LABS_API_KEY")),
+        twilio_config=TWILIO_CONFIG
     )
 
     # input("Press enter to start call...")
